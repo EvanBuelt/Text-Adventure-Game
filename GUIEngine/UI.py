@@ -2,7 +2,7 @@ __author__ = 'Evan'
 import pygame
 
 pygame.font.init()
-UI_FONT = gentiumBookBasic = pygame.font.Font(pygame.font.match_font('gentiumbookbasic'), 14)
+UI_FONT = gentiumBookBasic = pygame.font.Font(pygame.font.match_font('gentiumbookbasic'), 20)
 
 BLACK = (0, 0, 0, 255)
 DARKGRAY = (64, 64, 64, 255)
@@ -26,10 +26,19 @@ class InheritanceError(Exception):
 # Base UI Element to be used with an engine.  This should be inherited by every UI Element, as the engine
 # will expect to use the methods below.
 class UIElement(object):
-    def __init__(self, engine):
+    def __init__(self, engine, rect, z):
         if engine is not None:
             engine.add_ui_element(self)
-        return
+
+        # Every UI element will need an x, y, and z coordinate (in the form of a rect and z).
+        # Every UI element will also need to know if it is visible or not.
+        # Set location for text
+        if rect is None:
+            self._rect = pygame.Rect(0, 0, 60, 30)
+        else:
+            self._rect = pygame.Rect(rect)
+        self._z = z
+        self._visible = True
 
     # Used to render an image to the screen.
     def render(self, surface):
@@ -41,14 +50,45 @@ class UIElement(object):
 
     # Used to set the location of the UI Element.
     def set_location(self, x, y, z):
-        raise InheritanceError('Function not defined')
+        self._rect.topleft = (x, y)
+        self._z = z
+        self._update()
 
     # Used to handle a pygame event.
     def handle_event(self, event):
         raise InheritanceError('Function not defined')
 
     def collide(self, x, y):
-        raise InheritanceError('Function not defined')
+        return self._rect.collidepoint(x, y)
+
+    # Properties to access variables
+    def _prop_get_rect(self):
+        return self._rect
+
+    def _prop_set_rect(self, new_rect):
+        self._rect = pygame.Rect(new_rect)
+        self._update()
+        return
+
+    def _prop_get_z(self):
+        return self._z
+
+    def _prop_set_z(self, new_z):
+        self._z = new_z
+        self._update()
+        return
+
+    def _prop_get_visible(self):
+        return self._visible
+
+    def _prop_set_visible(self, visible):
+        self._visible = visible
+        self._update()
+        return
+
+    rect = property(_prop_get_rect, _prop_set_rect)
+    z = property(_prop_get_z, _prop_set_z)
+    visible = property(_prop_get_visible, _prop_set_visible)
 
 
 # The following classes are used as a base for common UI Elements.  The first way to handle UI Elements is to
@@ -70,14 +110,7 @@ class _BaseText(UIElement):
     def __init__(self, engine, rect=None, z=0, text='',
                  background_color=TRANSPARENT, text_color=BLACK, font=None):
 
-        UIElement.__init__(self, engine)
-
-        # Set location for text
-        if rect is None:
-            self._rect = pygame.Rect(0, 0, 60, 30)
-        else:
-            self._rect = pygame.Rect(rect)
-        self._z = z
+        UIElement.__init__(self, engine, rect, z)
 
         # Set color of background and text color
         self._bgColor = background_color
@@ -92,8 +125,6 @@ class _BaseText(UIElement):
             self._font = UI_FONT
         else:
             self._font = font
-
-        self._visible = True
 
         # Create standard surface for text
         self._surfaceNormal = pygame.Surface(self._rect.size).convert_alpha()
@@ -118,11 +149,6 @@ class _BaseText(UIElement):
         text_rect.center = int(w / 2), int(h / 2)
         self._surfaceNormal.blit(text_surf, text_rect)
 
-    def set_location(self, x, y, z):
-        self._rect.topleft = (x, y)
-        self._z = z
-        self._update()
-
     def handle_event(self, event):
         pass
 
@@ -131,14 +157,6 @@ class _BaseText(UIElement):
 
     def _prop_set_text(self, new_text):
         self._text = new_text
-        self._update()
-        return
-
-    def _prop_get_rect(self):
-        return self._rect
-
-    def _prop_set_rect(self, new_rect):
-        self._rect = pygame.Rect(new_rect)
         self._update()
         return
 
@@ -166,49 +184,22 @@ class _BaseText(UIElement):
         self._update()
         return
 
-    def _prop_get_visible(self):
-        return self._visible
-
-    def _prop_set_visible(self, visible):
-        self._visible = visible
-        self._update()
-        return
-
-    def _prop_get_z(self):
-        return self.z
-
-    def _prop_set_z(self, new_z):
-        self._z = new_z
-        self._update()
-        return
-
-    rect = property(_prop_get_rect, _prop_set_rect)
-    z = property(_prop_get_z, _prop_set_z)
     text = property(_prop_get_text, _prop_set_text)
     text_color = property(_prop_get_text_color, _prop_set_text_color)
     font = property(_prop_get_font, _prop_set_font)
     background_color = property(_prop_get_background_color, _prop_set_background_color)
-    visible = property(_prop_get_visible, _prop_set_visible)
 
 
 class _BaseTextBox(UIElement):
     def __init__(self, engine, rect=None, z=0, background_text=None, background_color=WHITE,
                  input_text_color=BLACK, background_text_color=LIGHTGRAY, font=None):
 
-        UIElement.__init__(self, engine)
-
-        # Set location of TextBox
-        if rect is None:
-            self._rect = pygame.Rect(0, 0, 60, 30)
-        else:
-            self._rect = pygame.Rect(rect)
-        self._z = z
+        UIElement.__init__(self, engine, rect, z)
 
         # Set values for surface display
         self._bgColor = background_color
         self._inputTextColor = input_text_color
         self._bgTextColor = background_text_color
-        self._visible = True
 
         # Input text uses a list that is converted to a string (which is immutable)
         self._inputText = ''
@@ -290,20 +281,8 @@ class _BaseTextBox(UIElement):
         pygame.draw.line(self._surfaceNormal, GRAY, (1, h - 2), (w - 2, h - 2))
         pygame.draw.line(self._surfaceNormal, GRAY, (w - 2, 1), (w - 2, h - 2))
 
-    def set_location(self, x, y, z):
-        self._rect.topleft = (x, y)
-        self._z = z
-        self._update()
-
     def handle_event(self, event):
         pass
-
-    def _prop_set_rect(self, new_rect):
-        self._rect = pygame.Rect(new_rect)
-        self._update()
-
-    def _prop_get_rect(self):
-        return self._rect
 
     def _prop_set_background_text(self, new_background_text):
         self._bgText = new_background_text
@@ -348,49 +327,25 @@ class _BaseTextBox(UIElement):
     def _prop_get_font(self):
         return self._font
 
-    def _prop_set_visible(self, visible):
-        self._visible = visible
-        self._update()
-
-    def _prop_get_visible(self):
-        return self._visible
-
-    def _prop_set_z(self, new_z):
-        self._z = new_z
-        self._update()
-
-    def _prop_get_z(self):
-        return self._z
-
-    rect = property(_prop_get_rect, _prop_set_rect)
-    z = property(_prop_get_z, _prop_set_z)
     backgroundText = property(_prop_get_background_text, _prop_set_background_text)
     backgroundTextColor = property(_prop_get_background_text_color, _prop_set_background_text_color)
     backgroundColor = property(_prop_get_background_color, _prop_set_background_color)
     inputText = property(_prop_get_input_text, _prop_set_input_text)
     inputTextColor = property(_prop_get_input_text_color, _prop_set_input_text_color)
     font = property(_prop_get_font, _prop_set_font)
-    visible = property(_prop_get_visible, _prop_set_visible)
 
 
 class _BaseCheckBox(UIElement):
     def __init__(self, engine, rect=None, z=0, background_color=WHITE):
         # Set position of element
 
-        UIElement.__init__(self, engine)
-
-        if rect is None:
-            self._rect = pygame.Rect(0, 0, 14, 14)
-        else:
-            self._rect = pygame.Rect(rect)
-        self._z = z
+        UIElement.__init__(self, engine, rect, z)
 
         self._bgColor = background_color
 
         # Variables to track internal state in reaction to events
         self._isChecked = False
         self._lastMouseDownOverCheckBox = False
-        self._visible = True
 
         # Images to be displayed on screen
         self._surfaceNormal = pygame.Surface(self._rect.size)
@@ -426,20 +381,8 @@ class _BaseCheckBox(UIElement):
         pygame.draw.line(self._surfaceChecked, GREEN, (3, int(h / 2)), (int(w / 2), h - 5), 3)
         pygame.draw.line(self._surfaceChecked, GREEN, (int(w / 2), h - 5), (w - 5, 4), 3)
 
-    def set_location(self, x, y, z):
-        self._rect.topleft = (x, y)
-        self._z = z
-        self._update()
-
     def handle_event(self, event):
         pass
-
-    def _prop_set_rect(self, new_rect):
-        self._rect = pygame.Rect(new_rect)
-        self._update()
-
-    def _prop_get_rect(self):
-        return self._rect
 
     def _prop_set_background_color(self, new_background_color):
         self._bgColor = new_background_color
@@ -448,13 +391,6 @@ class _BaseCheckBox(UIElement):
     def _prop_get_background_color(self):
         return self._bgColor
 
-    def _prop_set_visible(self, new_visible):
-        self._visible = new_visible
-        self._update()
-
-    def _prop_get_visible(self):
-        return self._visible
-
     def _prop_set_is_checked(self, is_checked):
         self._isChecked = is_checked
         self._update()
@@ -462,17 +398,7 @@ class _BaseCheckBox(UIElement):
     def _prop_get_is_checked(self):
         return self._isChecked
 
-    def _prop_set_z(self, new_z):
-        self._z = new_z
-        self._update()
-
-    def _prop_get_z(self):
-        return self._z
-
-    rect = property(_prop_get_rect, _prop_set_rect)
-    z = property(_prop_get_z, _prop_set_z)
     backgroundColor = property(_prop_get_background_color, _prop_set_background_color)
-    visible = property(_prop_get_visible, _prop_set_visible)
     checked = property(_prop_get_is_checked, _prop_set_is_checked)
 
 
@@ -480,14 +406,7 @@ class _BaseButton(UIElement):
     def __init__(self, engine, rect=None, z=0, text='',
                  background_color=LIGHTGRAY, foreground_color=BLACK, font=None):
 
-        UIElement.__init__(self, engine)
-
-        # set initial size and location
-        if rect is None:
-            self._rect = pygame.Rect(0, 0, 30, 60)
-        else:
-            self._rect = pygame.Rect(rect)
-        self._z = z
+        UIElement.__init__(self, engine, rect, z)
 
         # set text and color to be applied to blank surfaces
         self._text = text
@@ -510,7 +429,6 @@ class _BaseButton(UIElement):
         self._buttonDown = False  # is the button currently pushed down?
         self._mouseOverButton = False  # is the mouse currently hovering over the button?
         self._lastMouseDownOverButton = False  # was the last mouse down event over the mouse button? (Tracks clicks.)
-        self._visible = True  # is the button visible
 
         # update graphics for the button
         self._update()
@@ -566,12 +484,6 @@ class _BaseButton(UIElement):
         # draw border for highlight button
         self._surfaceHighlight = self._surfaceNormal
 
-    def set_location(self, x, y, z):
-        self._rect.topleft = (x, y)
-        self._z = z
-        self._update()
-        return
-
     def get_text(self):
         return self._text
 
@@ -580,13 +492,6 @@ class _BaseButton(UIElement):
 
     def handle_event(self, event):
         pass
-
-    def _prop_set_rect(self, new_rect):
-        self._rect = pygame.Rect(new_rect)
-        self._update()
-
-    def _prop_get_rect(self):
-        return self._rect
 
     def _prop_set_background_color(self, new_background_color):
         self._bgColor = new_background_color
@@ -602,13 +507,6 @@ class _BaseButton(UIElement):
     def _prop_get_foreground_color(self):
         return self._fgColor
 
-    def _prop_set_visible(self, new_visible):
-        self._visible = new_visible
-        self._update()
-
-    def _prop_get_visible(self):
-        return self._visible
-
     def _prop_set_font(self, new_font):
         self._visible = new_font
         self._update()
@@ -623,18 +521,8 @@ class _BaseButton(UIElement):
     def _prop_get_text(self):
         return self._text
 
-    def _prop_set_z(self, new_z):
-        self._z = new_z
-        self._update()
-
-    def _prop_get_z(self):
-        return self._z
-
-    rect = property(_prop_get_rect, _prop_set_rect)
-    z = property(_prop_get_z, _prop_set_z)
     foregroundColor = property(_prop_get_foreground_color, _prop_set_foreground_color)
     backgroundColor = property(_prop_get_background_color, _prop_set_background_color)
-    visible = property(_prop_get_visible, _prop_set_visible)
     font = property(_prop_get_font, _prop_set_font)
     text = property(_prop_get_text, _prop_set_text)
 
@@ -646,9 +534,6 @@ class Text(_BaseText):
         # Let base handle most of initialization.  Base class should call _update.
         _BaseText.__init__(self, engine, rect, z, text,
                            background_color, text_color, font)
-
-        # Update just in case.
-        self._update()
 
 
 class TextBox(_BaseTextBox):
@@ -662,9 +547,6 @@ class TextBox(_BaseTextBox):
 
         # Set callback function.
         self._callbackFunction = callback_function
-
-        # Update just in case
-        self._update()
 
     def set_callback(self, new_callback_function):
         # Set the callback function to be called upon user hitting the enter key
@@ -730,9 +612,6 @@ class CheckBox(_BaseCheckBox):
         # Set function to be called when checked or unchecked
         self._callbackFunction = callback_function
 
-        # Update just in case.
-        self._update()
-
     def set_callback(self, new_callback_function):
         # Set the callback function to be called upon checkbox changing checked state
         self._callbackFunction = new_callback_function
@@ -782,9 +661,6 @@ class Button(_BaseButton):
 
         # Set callback if provided
         self._callbackFunction = callback_function
-
-        # Update just in case
-        self._update()
 
     def set_callback(self, new_callback_function):
         # Set the callback function to be called upon checkbox changing checked state
@@ -862,9 +738,6 @@ class PyText(_BaseText):
         self._mouseOverText = False
         self._lastMouseDownOverText = False
         self._isSelected = False
-
-        # Update just in case.
-        self._update()
 
     def handle_event(self, event):
         # Track only mouse presses and key presses, if visible
@@ -954,8 +827,6 @@ class PyTextBox(_BaseTextBox):
                               input_text_color, background_text_color, font)
 
         self._mouseOverTextBox = False
-        # Update just in case
-        self._update()
 
     def handle_event(self, event):
         # Track only mouse presses and key presses, if visible
@@ -1045,9 +916,6 @@ class PyCheckBox(_BaseCheckBox):
         # Variables to be used in handling events
         self._mouseOverCheckBox = False
 
-        # Update just in case
-        self._update()
-
     def handle_event(self, event):
         # Track only mouse presses and key presses, if visible
         if event.type not in (pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION,
@@ -1135,9 +1003,6 @@ class PyButton(_BaseButton):
         # Let base handle most of initialization.  Base class should call _update.
         _BaseButton.__init__(self, engine, rect, z, text,
                              background_color, foreground_color, font)
-
-        # Update just in case
-        self._update()
 
     def handle_event(self, event):
         # Track only mouse presses and key presses, if visible

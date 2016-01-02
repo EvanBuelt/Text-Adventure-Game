@@ -1,7 +1,6 @@
 __author__ = 'Evan'
 import sys
 import pygame
-import random
 
 
 class MouseButton:
@@ -36,6 +35,7 @@ class Engine:
     DISPLAYSURFACE = None
     width = 0
     height = 0
+    backgroundColor = None
 
     # Event handlers for various events, to be linked internally and externally
     mouseClick = EventHandler()
@@ -51,11 +51,12 @@ class Engine:
         raise NotImplementedError("Engine cannot be instantiated.")
 
     @classmethod
-    def init(cls, width=800, height=600, display_caption='UI Engine'):
+    def init(cls, width=800, height=600, background_color=(70, 200, 70), display_caption='UI Engine'):
         # Setup the pygame display for use in the Engine
         pygame.init()
         cls.width = width
         cls.height = height
+        cls.backgroundColor = background_color
         cls.DISPLAYSURFACE = pygame.display.set_mode((width, height), 0, 32)
         pygame.display.set_caption(display_caption)
 
@@ -98,10 +99,10 @@ class Engine:
 
     @classmethod
     def render(cls):
-        cls.DISPLAYSURFACE.fill((70, 200, 70))
+        cls.DISPLAYSURFACE.fill(cls.backgroundColor)
         cls._sort_ui_elements()
-        for card in cls._UIElements:
-            card.render(cls.DISPLAYSURFACE)
+        for ui_element in cls._UIElements:
+            ui_element.render(cls.DISPLAYSURFACE)
         pygame.display.update()
 
     # Methods below are used to handle the ui elements on screen.
