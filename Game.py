@@ -15,18 +15,14 @@ dark_blue = (41, 86, 143)
 GUI_Engine = Engine.Engine
 GUI_Engine.init(800, 600, dark_blue, "My text Adventure")
 
-# Create a button
-main_button = UI.Button(GUI_Engine, pygame.Rect(200, 200, 60, 30), 0, 'Start')
-main_button.callbackFunction = button_press
-
-# Create text
-custom_text = customUI.MultiLineText(GUI_Engine, pygame.Rect(0, 0, 400, 200), 0,
-                                     'This is a really, really, really, really, long text. If it is not, '
-                                     'it will not show multiple lines.')
+# Create initial screen.  Transitions will be taken care of from initial screen
+initial_screen = customUI.InitialScreen(GUI_Engine)
+screen_machine = customUI.ScreenStateMachine(initial_screen)
 
 clock = pygame.time.Clock()
 
 while True:
     GUI_Engine.update()
     GUI_Engine.render()
+    screen_machine.update()
     clock.tick(30)
