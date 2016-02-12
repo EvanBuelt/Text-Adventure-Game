@@ -1,8 +1,7 @@
 __author__ = 'Evan'
 import pygame
 import GUIEngine.Engine as Engine
-import GUIEngine.UI as UI
-import GUIEngine.CustomUI as customUI
+import LogicEngine.Display as Display
 
 
 def button_press(button):
@@ -16,8 +15,8 @@ GUI_Engine = Engine.Engine
 GUI_Engine.init(800, 600, dark_blue, "My text Adventure")
 
 # Create initial screen.  Transitions will be taken care of from initial screen
-initial_screen = customUI.InitialScreen(GUI_Engine)
-screen_machine = customUI.ScreenStateMachine(initial_screen)
+initial_screen = Display.InitialScreen(GUI_Engine)
+screen_machine = Display.ScreenStateMachine(initial_screen)
 
 clock = pygame.time.Clock()
 
